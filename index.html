@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -77,7 +76,6 @@
     }
 
     @media (max-width: 600px) {
-
       form,
       .valor-extra,
       table {
@@ -91,7 +89,6 @@
     }
   </style>
 </head>
-
 <body>
 
   <h1>Controle de Jogos</h1>
@@ -129,12 +126,10 @@
 
   <button id="ver-todos" class="ocultar">Ver todos</button>
 
-  <script type="module">
-    // Importando o Firebase
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
-
-    // Configuração do Firebase
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"></script>
+  <script>
+    // Sua configuração do Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyC4cRV_g8XFCk2WHgLD0DBXkyf6Ttv_pm4",
       authDomain: "controle-de-jogos-f8ccd.firebaseapp.com",
@@ -144,9 +139,9 @@
       appId: "1:266691697880:web:d1fa596bbd61e4f08e0bad"
     };
 
-    // Inicializando o Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    // Inicializa o Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
     const form = document.getElementById("form-jogo");
     const lista = document.getElementById("lista-jogos");
@@ -155,35 +150,52 @@
 
     let jogos = [];
 
-    // Função para adicionar um jogo no Firestore
-    async function adicionarJogo(jogo) {
-      try {
-        const docRef = await addDoc(collection(db, "jogos"), jogo);
-        console.log("Jogo adicionado com ID: ", docRef.id);
-        jogos.push(jogo);
+    // Função para salvar jogos no Firebase
+    function salvarJogos() {
+      // Salva no Firebase
+      jogos.forEach((jogo) => {
+        db.collection("jogos").doc(jogo.data + jogo.local + jogo.funcao).set(jogo)
+          .then(() => console.log("Jogo salvo no Firebase"))
+          .catch((error) => console.error("Erro ao salvar jogo no Firebase: ", error));
+      });
+    }
+
+    // Função para carregar os jogos do Firebase
+    function carregarJogosDoFirebase() {
+      db.collection("jogos").get().then((querySnapshot) => {
+        querySnapshot.forEach((doc) => {
+          const jogo = doc.data();
+          jogos.push(jogo);
+        });
         renderizarJogos();
-      } catch (e) {
-        console.error("Erro ao adicionar jogo: ", e);
+      }).catch((error) => {
+        console.error("Erro ao carregar jogos do Firebase: ", error);
+      });
+    }
+
+    // Função para excluir um jogo
+    function excluirJogo(index) {
+      if (confirm("Tem certeza que deseja excluir este jogo?")) {
+        const jogo = jogos[index];
+        // Remover do Firebase
+        db.collection("jogos").doc(jogo.data + jogo.local + jogo.funcao).delete()
+          .then(() => {
+            jogos.splice(index, 1);
+            salvarJogos(); // Atualiza o Firebase após a exclusão
+            renderizarJogos();
+          })
+          .catch((error) => console.error("Erro ao excluir jogo do Firebase: ", error));
       }
     }
 
-    // Função para carregar os jogos do Firestore
-    async function carregarJogosDoFirestore() {
-      const querySnapshot = await getDocs(collection(db, "jogos"));
-      querySnapshot.forEach((doc) => {
-        jogos.push(doc.data());
-      });
-      renderizarJogos();
-    }
-
-    // Função para calcular os valores de 10% e líquido
+    // Função para calcular valores
     function calcularValores(valor) {
       const dezPorCento = valor * 0.1;
       const liquido = valor - dezPorCento;
       return { dezPorCento, liquido };
     }
 
-    // Função para renderizar os jogos na página
+    // Função para renderizar jogos
     function renderizarJogos() {
       lista.innerHTML = "";
       const jogosExibidos = window.innerWidth < 600 ? jogos.slice(-3) : jogos;
@@ -211,7 +223,7 @@
 
       const total = jogos.reduce((soma, j) => soma + j.valor, 0);
       const { dezPorCento, liquido } = calcularValores(total);
-      valorInfo.innerHTML = ` 
+      valorInfo.innerHTML = `
         <strong>Total:</strong> R$ ${total.toFixed(2)} |
         <strong>10%:</strong> R$ ${dezPorCento.toFixed(2)} |
         <strong>Líquido:</strong> R$ ${liquido.toFixed(2)}
@@ -219,14 +231,13 @@
       valorInfo.style.display = jogos.length ? "block" : "none";
     }
 
-    // Função para excluir um jogo
-    async function excluirJogo(index) {
-      if (confirm("Tem certeza que deseja excluir este jogo?")) {
-        const jogoExcluido = jogos.splice(index, 1)[0];
-        await deleteDoc(doc(db, "jogos", jogoExcluido.id));
-        renderizarJogos();
-      }
+    // Função para carregar os jogos na inicialização
+    function init() {
+      carregarJogosDoFirebase();
     }
+
+    // Inicializando
+    init();
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -237,18 +248,17 @@
         valor: parseFloat(form.valor.value),
         quantidade: parseInt(form.quantidade.value)
       };
-      adicionarJogo(novoJogo);
+      jogos.push(novoJogo);
+      salvarJogos(); // Atualiza o Firebase
+      renderizarJogos();
       form.reset();
     });
 
     verTodosBtn.addEventListener("click", () => {
       verTodosBtn.classList.add("ocultar");
-      renderizarJogos(jogos);
+      renderizarJogos();
     });
-
-    carregarJogosDoFirestore();
   </script>
 
 </body>
-
 </html>
