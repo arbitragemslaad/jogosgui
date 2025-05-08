@@ -1,57 +1,138 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
+
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Controle de Jogos</title>
-  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f0;
+      padding: 20px;
+      margin: 0;
+      color: #333;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2e7d32;
+    }
+
+    form {
+      display: grid;
+      gap: 10px;
+      max-width: 500px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    input,
+    select,
+    button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #2e7d32;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #27642b;
+    }
+
+    table {
+      width: 100%;
+      margin-top: 20px;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 8px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+
+    .valor-extra {
+      max-width: 500px;
+      margin: 10px auto;
+      padding: 10px;
+      background: #e0f2f1;
+      border: 1px solid #b2dfdb;
+      border-radius: 10px;
+    }
+
+    .ocultar {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+
+      form,
+      .valor-extra,
+      table {
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        padding: 6px;
+      }
+    }
+  </style>
 </head>
+
 <body>
-  <div class="container">
-    <h1>Controle de Jogos</h1>
-    <form id="form-jogo">
-      <label for="data">Data:</label>
-      <input type="date" id="data" name="data" required>
-      
-      <label for="local">Local:</label>
-      <input type="text" id="local" name="local" required>
-      
-      <label for="funcao">Função:</label>
-      <input type="text" id="funcao" name="funcao" required>
-      
-      <label for="valor">Valor:</label>
-      <input type="number" id="valor" name="valor" required>
-      
-      <label for="quantidade">Quantidade:</label>
-      <input type="number" id="quantidade" name="quantidade" required>
-      
-      <button type="submit">Adicionar Jogo</button>
-    </form>
-    <div id="valor-info" class="valor-info"></div>
 
-    <table id="tabela-jogos">
-      <thead>
-        <tr>
-          <th>Data</th>
-          <th>Local</th>
-          <th>Função</th>
-          <th>Valor</th>
-          <th>10%</th>
-          <th>Líquido</th>
-          <th>Quantidade</th>
-          <th>Ação</th>
-        </tr>
-      </thead>
-      <tbody id="lista-jogos"></tbody>
-    </table>
+  <h1>Controle de Jogos</h1>
 
-    <button id="ver-todos" class="ocultar">Ver todos os jogos</button>
-  </div>
+  <form id="form-jogo">
+    <input type="date" id="data" required />
+    <input type="text" id="local" placeholder="Local do jogo" required />
+    <select id="funcao" required>
+      <option value="">Selecione a função</option>
+      <option value="Árbitro">Árbitro</option>
+      <option value="Bandeirinha">Bandeirinha</option>
+    </select>
+    <input type="number" id="valor" placeholder="Valor total" required />
+    <input type="number" id="quantidade" placeholder="Quantidade de jogos" value="1" required />
+    <button type="submit">Adicionar</button>
+  </form>
+
+  <div class="valor-extra" id="valor-info" style="display: none;"></div>
+
+  <table id="tabela-jogos">
+    <thead>
+      <tr>
+        <th>Data</th>
+        <th>Local</th>
+        <th>Função</th>
+        <th>Valor</th>
+        <th>10%</th>
+        <th>Líquido</th>
+        <th>Qtd</th>
+        <th>Excluir</th>
+      </tr>
+    </thead>
+    <tbody id="lista-jogos"></tbody>
+  </table>
+
+  <button id="ver-todos" class="ocultar">Ver todos</button>
 
   <script type="module">
-    // Importa as funções necessárias do SDK do Firebase
+    // Importando o Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.7.1/firebase-firestore.js";
 
     // Configuração do Firebase
     const firebaseConfig = {
@@ -63,31 +144,9 @@
       appId: "1:266691697880:web:d1fa596bbd61e4f08e0bad"
     };
 
-    // Inicializa o Firebase
+    // Inicializando o Firebase
     const app = initializeApp(firebaseConfig);
-
-    // Inicializa o Firestore
     const db = getFirestore(app);
-
-    // Função para adicionar um jogo ao Firestore
-    async function adicionarJogo(jogo) {
-      try {
-        const docRef = await addDoc(collection(db, "jogos"), jogo);
-        console.log("Jogo adicionado com ID: ", docRef.id);
-      } catch (e) {
-        console.error("Erro ao adicionar jogo: ", e);
-      }
-    }
-
-    // Função para carregar todos os jogos do Firestore
-    async function carregarJogos() {
-      const querySnapshot = await getDocs(collection(db, "jogos"));
-      const jogos = [];
-      querySnapshot.forEach((doc) => {
-        jogos.push(doc.data());
-      });
-      return jogos;
-    }
 
     const form = document.getElementById("form-jogo");
     const lista = document.getElementById("lista-jogos");
@@ -96,20 +155,35 @@
 
     let jogos = [];
 
+    // Função para adicionar um jogo no Firestore
+    async function adicionarJogo(jogo) {
+      try {
+        const docRef = await addDoc(collection(db, "jogos"), jogo);
+        console.log("Jogo adicionado com ID: ", docRef.id);
+        jogos.push(jogo);
+        renderizarJogos();
+      } catch (e) {
+        console.error("Erro ao adicionar jogo: ", e);
+      }
+    }
+
     // Função para carregar os jogos do Firestore
-    async function carregarJogosFirebase() {
-      jogos = await carregarJogos();
+    async function carregarJogosDoFirestore() {
+      const querySnapshot = await getDocs(collection(db, "jogos"));
+      querySnapshot.forEach((doc) => {
+        jogos.push(doc.data());
+      });
       renderizarJogos();
     }
 
-    // Função para calcular valores
+    // Função para calcular os valores de 10% e líquido
     function calcularValores(valor) {
       const dezPorCento = valor * 0.1;
       const liquido = valor - dezPorCento;
       return { dezPorCento, liquido };
     }
 
-    // Função para renderizar a lista de jogos
+    // Função para renderizar os jogos na página
     function renderizarJogos() {
       lista.innerHTML = "";
       const jogosExibidos = window.innerWidth < 600 ? jogos.slice(-3) : jogos;
@@ -137,7 +211,7 @@
 
       const total = jogos.reduce((soma, j) => soma + j.valor, 0);
       const { dezPorCento, liquido } = calcularValores(total);
-      valorInfo.innerHTML = `
+      valorInfo.innerHTML = ` 
         <strong>Total:</strong> R$ ${total.toFixed(2)} |
         <strong>10%:</strong> R$ ${dezPorCento.toFixed(2)} |
         <strong>Líquido:</strong> R$ ${liquido.toFixed(2)}
@@ -146,15 +220,15 @@
     }
 
     // Função para excluir um jogo
-    function excluirJogo(index) {
+    async function excluirJogo(index) {
       if (confirm("Tem certeza que deseja excluir este jogo?")) {
-        jogos.splice(index, 1);
+        const jogoExcluido = jogos.splice(index, 1)[0];
+        await deleteDoc(doc(db, "jogos", jogoExcluido.id));
         renderizarJogos();
       }
     }
 
-    // Envio do formulário
-    form.addEventListener("submit", async (e) => {
+    form.addEventListener("submit", (e) => {
       e.preventDefault();
       const novoJogo = {
         data: form.data.value,
@@ -163,15 +237,18 @@
         valor: parseFloat(form.valor.value),
         quantidade: parseInt(form.quantidade.value)
       };
-
-      jogos.push(novoJogo);
-      await adicionarJogo(novoJogo); // Salva no Firebase
-      renderizarJogos(); // Atualiza a tabela na página
+      adicionarJogo(novoJogo);
       form.reset();
     });
 
-    // Carrega os jogos ao iniciar a página
-    carregarJogosFirebase();
+    verTodosBtn.addEventListener("click", () => {
+      verTodosBtn.classList.add("ocultar");
+      renderizarJogos(jogos);
+    });
+
+    carregarJogosDoFirestore();
   </script>
+
 </body>
+
 </html>
