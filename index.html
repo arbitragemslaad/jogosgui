@@ -77,6 +77,7 @@
     }
 
     @media (max-width: 600px) {
+
       form,
       .valor-extra,
       table {
@@ -159,7 +160,7 @@
       try {
         const docRef = await addDoc(collection(db, "jogos"), jogo);
         console.log("Jogo adicionado com ID: ", docRef.id);
-        jogo.id = docRef.id;  // Adiciona o ID ao jogo para facilitar a exclusão
+        jogo.id = docRef.id; // Salva o ID do jogo
         jogos.push(jogo);
         renderizarJogos();
       } catch (e) {
@@ -171,7 +172,9 @@
     async function carregarJogosDoFirestore() {
       const querySnapshot = await getDocs(collection(db, "jogos"));
       querySnapshot.forEach((doc) => {
-        jogos.push({ ...doc.data(), id: doc.id });  // Adiciona o id ao jogo para facilitar a exclusão
+        const jogo = doc.data();
+        jogo.id = doc.id; // Adiciona o ID ao jogo
+        jogos.push(jogo);
       });
       renderizarJogos();
     }
@@ -187,9 +190,9 @@
     function renderizarJogos() {
       lista.innerHTML = "";
       const jogosExibidos = window.innerWidth < 600 ? jogos.slice(-3) : jogos;
-      jogosExibidos.forEach((jogo, index) => {
-        const tr = document.createElement("tr");
+      jogosExibidos.forEach((jogo) => {
         const { dezPorCento, liquido } = calcularValores(jogo.valor);
+        const tr = document.createElement("tr");
         tr.innerHTML = `
           <td>${jogo.data}</td>
           <td>${jogo.local}</td>
@@ -222,11 +225,17 @@
     // Função para excluir um jogo
     async function excluirJogo(id) {
       if (confirm("Tem certeza que deseja excluir este jogo?")) {
-        const jogoExcluidoIndex = jogos.findIndex(jogo => jogo.id === id);
-        if (jogoExcluidoIndex !== -1) {
-          const jogoExcluido = jogos.splice(jogoExcluidoIndex, 1)[0];
-          await deleteDoc(doc(db, "jogos", jogoExcluido.id));
+        try {
+          // Excluir do Firestore
+          await deleteDoc(doc(db, "jogos", id));
+
+          // Remover o jogo do array local
+          jogos = jogos.filter(jogo => jogo.id !== id);
+
+          // Atualizar a renderização da lista de jogos
           renderizarJogos();
+        } catch (error) {
+          console.error("Erro ao excluir o jogo:", error);
         }
       }
     }
@@ -246,7 +255,7 @@
 
     verTodosBtn.addEventListener("click", () => {
       verTodosBtn.classList.add("ocultar");
-      renderizarJogos();
+      renderizarJogos(jogos);
     });
 
     carregarJogosDoFirestore();
