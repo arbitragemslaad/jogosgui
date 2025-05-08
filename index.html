@@ -77,7 +77,6 @@
     }
 
     @media (max-width: 600px) {
-
       form,
       .valor-extra,
       table {
@@ -160,6 +159,7 @@
       try {
         const docRef = await addDoc(collection(db, "jogos"), jogo);
         console.log("Jogo adicionado com ID: ", docRef.id);
+        jogo.id = docRef.id;  // Adiciona o ID ao jogo para facilitar a exclusão
         jogos.push(jogo);
         renderizarJogos();
       } catch (e) {
@@ -171,7 +171,7 @@
     async function carregarJogosDoFirestore() {
       const querySnapshot = await getDocs(collection(db, "jogos"));
       querySnapshot.forEach((doc) => {
-        jogos.push(doc.data());
+        jogos.push({ ...doc.data(), id: doc.id });  // Adiciona o id ao jogo para facilitar a exclusão
       });
       renderizarJogos();
     }
@@ -198,7 +198,7 @@
           <td>R$ ${dezPorCento.toFixed(2)}</td>
           <td>R$ ${liquido.toFixed(2)}</td>
           <td>${jogo.quantidade}</td>
-          <td><button onclick="excluirJogo(${index})">X</button></td>
+          <td><button onclick="excluirJogo('${jogo.id}')">X</button></td>
         `;
         lista.appendChild(tr);
       });
@@ -220,11 +220,14 @@
     }
 
     // Função para excluir um jogo
-    async function excluirJogo(index) {
+    async function excluirJogo(id) {
       if (confirm("Tem certeza que deseja excluir este jogo?")) {
-        const jogoExcluido = jogos.splice(index, 1)[0];
-        await deleteDoc(doc(db, "jogos", jogoExcluido.id));
-        renderizarJogos();
+        const jogoExcluidoIndex = jogos.findIndex(jogo => jogo.id === id);
+        if (jogoExcluidoIndex !== -1) {
+          const jogoExcluido = jogos.splice(jogoExcluidoIndex, 1)[0];
+          await deleteDoc(doc(db, "jogos", jogoExcluido.id));
+          renderizarJogos();
+        }
       }
     }
 
@@ -243,7 +246,7 @@
 
     verTodosBtn.addEventListener("click", () => {
       verTodosBtn.classList.add("ocultar");
-      renderizarJogos(jogos);
+      renderizarJogos();
     });
 
     carregarJogosDoFirestore();
